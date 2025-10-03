@@ -28,23 +28,28 @@ El joc ha de tenir **cinc vistes**:
    - Mostra l’estat **“Esperant contrincant”** o **“Emparellant…”**.  
    - Quan l’altre jugador accepta, passa automàticament a la partida.
 
-4. **Partida (tauler i joc en temps real)**  
+4. **Compte enrrera**  
+   - Mostra **“3, 2, 1”**.  
+   - Passa automàticament a la partida.
+
+5. **Partida (tauler i joc en temps real)**  
    - **Tauler de 7 columnes (A–G) x 6 files (0–5)**.  
    - El tauler es dibuixa dins un **Canvas JavaFX** i es redibuixa cada cop que canvia l’estat.  
    - **Interacció i torns**:  
-     - El jugador amb el torn veu el text **“Et toca jugar”**.  
+     - El jugador veu el punter del mouse del contrincant.
+     - El jugador amb el torn veu el text **“Et toca jugar”**. 
      - L’altre jugador té la interacció **desactivada**.  
    - **Hover i arrossegament**:  
-     - En passar el ratolí per sobre d’una **columna**, aquesta es **ressalta** i es mostra una **fitxa fantasma** a la part superior.  
-     - El jugador que **no** té el torn veu en temps real el **hover remot** de l’altre jugador (ressalt diferenciat).  
-     - Es pot fer **clic** a una columna o bé **arrossegar una fitxa** des de dalt i **deixar-la anar** a la columna per jugar.  
+     - Hi ha una serie de fitxes disponibles a la dreta de la finestra, ordenades aleatòriament com si estiguéssin a sobre d'una taula.
+     - El jugador ha d'escollir una de les fitxes del seu color i arrossegar-la a sobre d'una columna del tauler, quan aixeca el botó del mouse *"la fitxa cau"* per aquella columna.  
+     - L'oponent ha de veure la posició del mouse del jugador contrari en temps real, com arrossega una fitxa i com la deixa caure al tauler.
    - **Animació de caiguda**:  
      - Quan es juga, la fitxa cau animadament fins a la posició lliure més baixa de la columna.  
    - **Condicions de victòria i empat**:  
      - Guanya qui connecta **4 fitxes consecutives** (horitzontals, verticals o diagonals).  
      - Si el tauler s’omple sense guanyador, és **empat**.
 
-5. **Resultat**  
+6. **Resultat**  
    - Mostra **Guanyador / Perdedor / Empat**.  
    - Botons per **tornar a la selecció de contrincant** o **tancar**.
 
@@ -75,26 +80,64 @@ El joc ha de tenir **cinc vistes**:
   - Caiguda de fitxes  
   - Detecció de **4 en línia** i **empat**  
   - Sincronització d’estat entre clients
+  - Manté la lògica de la partida
+
 - Els **clients**:
   - **Envien esdeveniments** (connectar, convidar, acceptar, **hover**, **jugada**)  
   - **Renderitzen** l’estat rebut del servidor  
   - Fan servir **Canvas + animacions** per a la UI
+  - Fa la lògica d'animació de caiguda
 
 ---
 
-## Protocol (orientatiu) via WebSocket
+## Protocol/API via WebSocket (orientatiu)
 
-Esdeveniments mínims (API - JSON):
+Client > Servidor:
 
-- `join { name }`
-- `lobby.list { players[] }`
-- `invite { to }` / `invite.accept { from }` / `invite.decline`
-- `game.start { gameId, youAre: "R"|"Y", firstTurn }`
-- `game.hover { gameId, column }` *(s’emet mentre el ratolí es mou per columnes)*
-- `game.play { gameId, column }`
-- `game.state { board, turn, lastMove, status: "playing"|"win"|"draw", winner? }`
-- `game.end { result: "win"|"lose"|"draw" }`
-- `error { message }`
+- clientMouseMoving
+- clientPieceMoving
+- clientPlay
+
+Servidor > Clients:
+
+- countdown
+- serverData
+
+Proposta de serverData (caldrà adaptar-la):
+
+- role: R (red), Y (yellow)
+- status: waiting | countdown | playing | win | draw
+- lastMove: per animar la caiguda
+
+```json
+{
+  "type": "serverData",
+  "clientName": "Bulbasaur",
+  "clientsList": [
+    { "name": "Bulbasaur", "color": "GREEN", "mouseX": 412.5, "mouseY": 133.0, "role": "R" },
+    { "name": "Charizard", "color": "ORANGE", "mouseX": 220.0, "mouseY": 210.0, "role": "Y" }
+  ],
+  "objectsList": [
+    { "id": "R_00", "x": 610.0, "y": 80.0, "role": "R" },
+    { "id": "Y_00", "x": 670.0, "y": 80.0, "role": "Y" }
+    ...
+  ],
+  "game": {
+    "status": "playing",
+    "board": [
+      [" "," "," "," "," "," "," "],
+      [" "," "," "," "," "," "," "],
+      [" "," "," "," "," "," "," "],
+      [" "," "," ","R"," "," "," "],
+      [" "," "," ","R","Y"," "," "],
+      ["R","Y"," ","R","Y"," "," "]
+    ],
+    "turn": "Bulbasaur", 
+    "lastMove": { "col": 3, "row": 3 },
+    "winner": "" 
+  }
+}
+```
 
 ---
 
@@ -104,11 +147,15 @@ Esdeveniments mínims (API - JSON):
 - **WebSockets** per a la comunicació temps real (client Java; servidor pot ser Java o un altre llenguatge).  
 - **Timeline / Animation** de JavaFX per a les caigudes de fitxes.  
 - **ExecutorService** opcional per a tasques d’E/S o timers (no bloquejar el fil d’UI).  
-- **CSS JavaFX** per estils generals i textos (missatges de torn, resultat, etc.).  
+- **CSS JavaFX** per estils generals 
 - **Separació clara** entre:
   - **Vista (UI Canvas + JavaFX)**  
   - **Client WS** (gestió de missatges)  
   - **Model** (estat local derivat del servidor)
+- **Server** Manté la lògica de la partida, envia *broadcast* a clients 30 vegades per segon
+- **Client** Envia interacció al servidor, anima la caiguda de fitxes
+
+> **Important!**: La lògica ha d'estar tota al servidor, els clients només han de mostrar l'estat de les dades que intercanvien amb el servidor
 
 ---
 
@@ -117,7 +164,7 @@ Esdeveniments mínims (API - JSON):
 - No es pot jugar en una **columna plena**.  
 - Només el **jugador amb torn** pot enviar `game.play`.  
 - El servidor rebutja jugades **invàlides** i re-emet l’**estat autoritatiu**.  
-- En acabar la partida, la vista 4 queda **en lectura** i es mostra la vista 5 (resultat).
+- En acabar la partida, es mostra la pantalla amb el resultat i el panell final
 
 ---
 
@@ -128,4 +175,4 @@ Esdeveniments mínims (API - JSON):
 - Documenta al `README.md`:
   - Com **arrencar el servidor**  
   - Com **executar el client**  
-  - **Ports**, variables d’entorn i dependències
+  - **Ports** i dependències
