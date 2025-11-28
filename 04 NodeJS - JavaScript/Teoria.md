@@ -24,7 +24,7 @@ sudo npm install -g n
 sudo n latest
 ```
 
-A MacOX:
+A MacOS:
 ```bash
 sudo brew install node
 sudo npm cache clean -f
@@ -87,7 +87,7 @@ var a = 4
 a = "hola"
 ```
 
-**Important**: canvar el tipus de les variables **és una mala pràctica**, perquè perjudica el rendiment i pot generar bugs.
+**Important**: canviar el tipus de les variables **és una mala pràctica**, perquè perjudica el rendiment i pot generar bugs.
 
 Els tipus de variables són:
 - **undefined**: una variable que ha estat declarada però no inicialitzada.
