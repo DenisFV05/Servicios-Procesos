@@ -10,7 +10,7 @@
 
 # Express
 
-**[Express](https://expressjs.com/)** és un framework que permet crear aplicaions web i APIs sobre **Node.js**
+**[Express](https://expressjs.com/)** és un framework que permet crear aplicacions web i APIs sobre **Node.js**
 
 <center><img src="./assets/logo-nodejs.png" style="max-width: 90%; max-height: 200px;" alt="">
 <br/></center>
